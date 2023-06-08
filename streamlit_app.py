@@ -1,6 +1,7 @@
 import streamlit as st
 import requests 
 import os
+import json
 
 st.set_page_config(
     page_title="Speech-to-Text Transcription APP",page_icon="🔉",
@@ -114,7 +115,7 @@ def demo():
         if getsize < 2:  # File more than 2MB
             # To read file as bytes:
             bytes_data = f.getvalue()
-
+            #region API key
             # Load your API key from an environment variable or secret management service
             api_token = st.secrets["api_token"]
 
