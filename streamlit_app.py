@@ -2,6 +2,10 @@ import streamlit as st
 import requests 
 import os
 import json
+import speech_recognition as sr
+import pyaudio
+import tempfile
+from pydub import AudioSegment
 
 st.set_page_config(
     page_title="Speech-to-Text Transcription APP",page_icon="🔉",
@@ -86,80 +90,81 @@ def main():
 
 
 def demo():
-
+    recognizer=sr.Recognizer()
     c1, c2, c3 = st.columns([1, 4, 1])
     with c2:
 
         with st.form(key="my_form"):
+            recognizer=sr.Recognizer()
 
-            f = st.file_uploader("", type=[".wav"])
+            f = tempfile.NamedTemporaryFile(delete=True)
 
-            st.info(
-                f"""
-                        👆 Upload a .wav file. Or try a sample: [Wav sample 01](https://github.com/CharlyWargnier/CSVHub/blob/main/Wave_files_demos/Welcome.wav?raw=true) | [Wav sample 02](https://github.com/CharlyWargnier/CSVHub/blob/main/Wave_files_demos/The_National_Park.wav?raw=true)
-                        """
-            )
+            with sr.Microphone() as source:
+                st.write("Say Something")
+                while True:
+                    audio=recognizer.listen(source)
+                    audio.export(f.name,format="wav")
 
-            submit_button = st.form_submit_button(label="Transcribe")
+                    submit_button = st.form_submit_button(label="Transcribe")
 
-    if f is not None:
-        path_in = f.name
-        # Get file size from buffer
-        # Source: https://stackoverflow.com/a/19079887
-        old_file_position = f.tell()
-        f.seek(0, os.SEEK_END)
-        getsize = f.tell()  # os.path.getsize(path_in)
-        f.seek(old_file_position, os.SEEK_SET)
-        getsize = round((getsize / 1000000), 1)
+                    if f is not None:
+                        path_in = f.name
+                        # Get file size from buffer
+                        # Source: https://stackoverflow.com/a/19079887
+                        old_file_position = f.tell()
+                        f.seek(0, os.SEEK_END)
+                        getsize = f.tell()  # os.path.getsize(path_in)
+                        f.seek(old_file_position, os.SEEK_SET)
+                        getsize = round((getsize / 1000000), 1)
 
-        if getsize < 2:  # File more than 2MB
-            # To read file as bytes:
-            bytes_data = f.getvalue()
-            #region API key
-            # Load your API key from an environment variable or secret management service
-            api_token = st.secrets["api_token"]
+                        if getsize < 2:  # File more than 2MB
+                            # To read file as bytes:
+                            bytes_data = f.getvalue()
+                            #region API key
+                            # Load your API key from an environment variable or secret management service
+                            api_token = st.secrets["api_token"]
 
-            # endregion API key
-            headers = {"Authorization": f"Bearer {api_token}"}
-            API_URL = "https://api-inference.huggingface.co/models/facebook/wav2vec2-base-960h"
+                            # endregion API key
+                            headers = {"Authorization": f"Bearer {api_token}"}
+                            API_URL = "https://api-inference.huggingface.co/models/facebook/wav2vec2-base-960h"
 
-            def query(data):
-                response = requests.request("POST", API_URL, headers=headers, data=data)
-                return json.loads(response.content.decode("utf-8"))
+                            def query(data):
+                                response = requests.request("POST", API_URL, headers=headers, data=data)
+                                return json.loads(response.content.decode("utf-8"))
 
-            data = query(bytes_data)
+                            data = query(bytes_data)
 
-            values_view = data.values()
-            value_iterator = iter(values_view)
-            text_value = next(value_iterator)
-            text_value = text_value.lower()
+                            values_view = data.values()
+                            value_iterator = iter(values_view)
+                            text_value = next(value_iterator)
+                            text_value = text_value.lower()
 
-            st.success(text_value)
+                            st.success(text_value)
 
-            c0, c1 = st.columns([2, 2])
+                            c0, c1 = st.columns([2, 2])
 
-            with c0:
-                st.download_button(
-                    "Download the transcription",
-                    text_value,
-                    file_name=None,
-                    mime=None,
-                    key=None,
-                    help=None,
-                    on_click=None,
-                    args=None,
-                    kwargs=None,
-                )
+                            with c0:
+                                st.download_button(
+                                    "Download the transcription",
+                                    text_value,
+                                    file_name=None,
+                                    mime=None,
+                                    key=None,
+                                    help=None,
+                                    on_click=None,
+                                    args=None,
+                                    kwargs=None,
+                                )
 
-        else:
-            st.warning(
-                "🚨 The file you uploaded is more than 2MB! Please switch to full mode ↖️ and add your HuggingFace API key."
-            )
-            st.stop()
+                        else:
+                            st.warning(
+                                "🚨 The file you uploaded is more than 2MB! Please switch to full mode ↖️ and add your HuggingFace API key."
+                            )
+                            st.stop()
 
-    else:
-        path_in = None
-        st.stop()
+                    else:
+                        path_in = None
+                        st.stop()
 
 
 # Custom API key mode -------------------------------------------------
